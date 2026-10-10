@@ -1,0 +1,9 @@
+- Catalog_N-test:
+    func: catalog_evaluations.number_test
+    plot_func:
+      - plot_test_distribution:
+          plot_args:
+            title: Number consistency test
+      - plot_consistency_test:
+          plot_kwargs:
+            one_sided_lower: True

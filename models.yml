@@ -1,0 +1,163 @@
+# One entry per model of claude/italy_models_status.md. TODO = fill in after the model check.
+# Names have no spaces (used in file names and by scripts/smoke_test.sh).
+
+# mag_compl = Mt of the input catalog (input_config.catalog.mag_min in config.yml)
+# build: docker runs the image CMD (func is only a label); repo_hash = branch/tag with the Dockerfile
+- mock:
+    giturl: https://github.com/pabloitu/pymock.git
+    repo_hash: main
+    path: models/mock
+    build: docker
+    func: pymock
+    prefix: pymock
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+      mag_compl: 2.5
+
+# same code, negative binomial counts (as in floatcsep tutorial H)
+- mock_nb:
+    giturl: https://github.com/pabloitu/pymock.git
+    repo_hash: main
+    path: models/mock_nb
+    build: docker
+    func: pymock
+    prefix: pymock
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+      mag_compl: 2.5
+      distribution: negbinom
+      apply_mc_to_lambda: True
+
+# upstream code; swap giturl/repo_hash for the fork with the parallel catalog generation
+- etas:
+    giturl: https://github.com/swiss-seismological-service/etas.git
+    repo_hash: csep/v1.0.0
+    path: models/etas
+    build: conda
+    args_file: args.json
+    func: etas-run
+    prefix: etas
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mc: 4.0
+
+- fletas:
+    giturl: TODO
+    repo_hash: TODO
+    path: models/fletas
+    build: conda
+    args_file: args.txt
+    func: TODO
+    prefix: fletas
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+
+- petai:
+    giturl: TODO
+    repo_hash: TODO
+    path: models/petai
+    build: conda
+    args_file: args.txt
+    func: TODO
+    prefix: petai
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+
+- simpleetas_hom:
+    giturl: TODO
+    repo_hash: TODO
+    path: models/simpleetas_hom
+    build: conda
+    args_file: args.txt
+    func: TODO
+    prefix: simpleetas_hom
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+
+- simpleetas_inh:
+    giturl: TODO
+    repo_hash: TODO
+    path: models/simpleetas_inh
+    build: conda
+    args_file: args.txt
+    func: TODO
+    prefix: simpleetas_inh
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+
+# R (inlabru 2.4.0 + INLA 22.04.16); fits on M >= mag_compl, so input_config.catalog.mag_min <= 2.5
+# n_cores: cores per container (default all). With run_mode: parallel add n_cores: 1 (floatCSEP runs
+# one container per window, up to min(host cores, 32), without CPU limits)
+- inlabru_td:
+    giturl: https://git.gfz-potsdam.de/csep/it_experiment/models/inlabru-dependent.git  # your inlabru-dependent fork with the italy_v1 branch
+    repo_hash: italy_v1
+    path: models/inlabru_td
+    build: docker
+    args_file: args.txt
+    func: Rscript source/source_inlabru_1dayfore.R
+    prefix: inlabru_td
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+      mag_compl: 2.5
+      fit_years: 1
+      max_events: 100000
+
+- two_alphas:
+    giturl: TODO
+    repo_hash: TODO
+    path: models/two_alphas
+    build: docker
+    args_file: args.txt
+    func: Rscript run.R
+    prefix: two_alphas
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0
+
+# Matlab: runs outside floatCSEP. Forecast files go in models/simpletas_matlab/forecasts/
+# named simpletas_matlab_{start}_{end}.csv. No giturl/build/func.
+- simpletas_matlab:
+    path: models/simpletas_matlab
+    prefix: simpletas_matlab
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+
+- etes:
+    giturl: TODO
+    repo_hash: TODO
+    path: models/etes
+    build: docker
+    args_file: args.txt
+    func: sh run.sh
+    prefix: etes
+    forecast_unit: 1
+    func_kwargs:
+      n_sims: 1000
+      seed: 23
+      mag_min: 4.0

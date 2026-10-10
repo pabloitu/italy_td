@@ -1,0 +1,35 @@
+name: Italy time-dependent experiment
+
+# window length: edit end_date, or derive a config with scripts/make_config.py --days N
+time_config:
+  start_date: 2016-08-24T00:00:00
+  end_date: 2016-08-31T00:00:00
+  horizon: 1days
+  exp_class: td
+
+region_config:
+  region: italy_csep_region
+  mag_min: 4.0
+  mag_max: 8.0
+  mag_bin: 0.1
+  depth_min: 0
+  depth_max: 30
+
+# models' input catalog (floatcsep >= e4081e2); the test catalog keeps region_config
+input_config:
+  catalog:
+    region: italy_csep_region
+    mag_min: 2.5
+    depth_max: 30
+
+# ISIDe, ML, CSEP ascii format (lon,lat,mag,time_string,depth,catalog_id,event_id)
+catalog: data/iside_ml.csv
+
+model_config: models.yml
+test_config: tests.yml
+run_dir: results
+force_rerun: False
+
+postprocess:
+  plot_catalog: True
+  plot_forecasts: False

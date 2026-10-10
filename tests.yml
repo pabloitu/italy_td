@@ -1,0 +1,30 @@
+- Catalog_N-test:
+    func: catalog_evaluations.number_test
+    plot_func:
+      - plot_test_distribution:
+          plot_args:
+            title: Number consistency test
+      - plot_consistency_test:
+          plot_kwargs:
+            one_sided_lower: True
+
+- Catalog_S-test:
+    func: catalog_evaluations.spatial_test
+    plot_func:
+      - plot_consistency_test:
+          plot_kwargs:
+            one_sided_lower: True
+
+- Catalog_M-test:
+    func: catalog_evaluations.magnitude_test
+    plot_func:
+      - plot_consistency_test:
+          plot_kwargs:
+            one_sided_lower: True
+
+- Catalog_L-test:
+    func: catalog_evaluations.pseudolikelihood_test
+    plot_func:
+      - plot_consistency_test:
+          plot_kwargs:
+            one_sided_lower: True

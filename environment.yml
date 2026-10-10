@@ -1,0 +1,27 @@
+name: testing_italy_td
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - h5py
+  - pytables
+  - matplotlib
+  - seaborn
+  - panel
+  - pyshp
+  - pyyaml
+  - requests
+  - dateparser
+  - docker-py
+  - gitpython
+  - xmltodict
+  - weasyprint
+  - markdown-it-py
+  - pip:
+      - pycsep==0.8.0
+      # italy_td at "ft: added input catalog specifications (#129)"
+      - git+https://github.com/cseptesting/floatcsep.git@main
