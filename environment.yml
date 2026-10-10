@@ -23,5 +23,5 @@ dependencies:
   - markdown-it-py
   - pip:
       - pycsep==0.8.0
-      # italy_td at "ft: added input catalog specifications (#129)"
-      - git+https://github.com/cseptesting/floatcsep.git@main
+      # main c1bed2b (2026-10-09): input_config, n_sims, task order, UTC fix, static dashboard
+      - git+https://github.com/cseptesting/floatcsep.git@c1bed2b88498f709faa70b21feedc3b1c3d76bca

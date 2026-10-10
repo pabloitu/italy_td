@@ -34,10 +34,11 @@
       distribution: negbinom
       apply_mc_to_lambda: True
 
-# Python ETAS family (GFZ repos, branch italy_v1): Docker image, ENTRYPOINT <prefix>-run reads
-# /app/input/args.json + catalog.csv. Catalog i uses seed + i, so n_jobs never changes a forecast.
-# n_jobs: 1 for run_mode parallel (one container per window, no CPU limit); drop it in sequential
-# mode to use all cores. Inputs: M >= 3.0 (mc in each repo's input/args.json), depth < depth_max.
+# ETAS family (GFZ GitLab, ssh; every machine needs a key: `ssh -T git@git.gfz-potsdam.de`).
+# Docker ENTRYPOINT <prefix>-run reads /app/input/args.json + catalog.csv, writes
+# /app/forecasts/<prefix>_{start}_{end}.csv (depth 0, CSEP testing cells only, catalog i seeded with
+# seed + i). n_jobs = processes per container; prepare_runs.py sets n_sims, n_jobs and the fit
+# window keys (timewindow_start, auxiliary_start) per run.
 - vetas:
     giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/vetas.git
     repo_hash: italy_v1
@@ -47,14 +48,8 @@
     func: etas-run
     prefix: etas
     forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-      seed: 23
-      mag_min: 4.0
-      depth_max: 30
-      n_jobs: 1
+    func_kwargs: {n_sims: 1000, seed: 23, mag_min: 4.0, depth_max: 30, n_jobs: 1}
 
-# two inversions (free background, free productivity) + question-driven ensemble QDE(1,1,0)
 - fletas:
     giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/fletas.git
     repo_hash: italy_v1
@@ -64,14 +59,8 @@
     func: fletas-run
     prefix: fletas
     forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-      seed: 23
-      mag_min: 4.0
-      depth_max: 30
-      n_jobs: 1
+    func_kwargs: {n_sims: 1000, seed: 23, mag_min: 4.0, depth_max: 30, n_jobs: 1}
 
-# ETAS with detection/incompleteness (history events inflated by their responsibility factor)
 - petai:
     giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/petai.git
     repo_hash: italy_v1
@@ -81,46 +70,13 @@
     func: petai-run
     prefix: petai
     forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-      seed: 23
-      mag_min: 4.0
-      depth_max: 30
-      n_jobs: 1
-
-- simpleetas_hom:
-    giturl: TODO
-    repo_hash: TODO
-    path: models/simpleetas_hom
-    build: conda
-    args_file: args.txt
-    func: TODO
-    prefix: simpleetas_hom
-    forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-      seed: 23
-      mag_min: 4.0
-
-- simpleetas_inh:
-    giturl: TODO
-    repo_hash: TODO
-    path: models/simpleetas_inh
-    build: conda
-    args_file: args.txt
-    func: TODO
-    prefix: simpleetas_inh
-    forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-      seed: 23
-      mag_min: 4.0
+    func_kwargs: {n_sims: 1000, seed: 23, mag_min: 4.0, depth_max: 30, n_jobs: 1}
 
 # R (inlabru 2.4.0 + INLA 22.04.16); fits on M >= mag_compl, so input_config.catalog.mag_min <= 2.5
 # n_cores: cores per container (default all). With run_mode: parallel add n_cores: 1 (floatCSEP runs
 # one container per window, up to min(host cores, 32), without CPU limits)
 - inlabru_td:
-    giturl: https://git.gfz-potsdam.de/csep/it_experiment/models/inlabru-dependent.git  # your inlabru-dependent fork with the italy_v1 branch
+    giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/inlabru-dependent.git
     repo_hash: italy_v1
     path: models/inlabru_td
     build: docker
@@ -135,40 +91,6 @@
       mag_compl: 2.5
       fit_years: 1
       max_events: 100000
+      n_cores: 1
 
-- two_alphas:
-    giturl: TODO
-    repo_hash: TODO
-    path: models/two_alphas
-    build: docker
-    args_file: args.txt
-    func: Rscript run.R
-    prefix: two_alphas
-    forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-      seed: 23
-      mag_min: 4.0
-
-# Matlab: runs outside floatCSEP. Forecast files go in models/simpletas_matlab/forecasts/
-# named simpletas_matlab_{start}_{end}.csv. No giturl/build/func.
-- simpletas_matlab:
-    path: models/simpletas_matlab
-    prefix: simpletas_matlab
-    forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-
-- etes:
-    giturl: TODO
-    repo_hash: TODO
-    path: models/etes
-    build: docker
-    args_file: args.txt
-    func: sh run.sh
-    prefix: etes
-    forecast_unit: 1
-    func_kwargs:
-      n_sims: 1000
-      seed: 23
-      mag_min: 4.0
+# models not integrated yet: see models_todo.yml

@@ -114,18 +114,10 @@ any other files from the model's input/) and the forecasts folder at `/app/forec
 image must read `/app/input/args.txt` and write `/app/forecasts/{prefix}_{start}_{end}.csv`.
 After changing a Dockerfile, remove the image (`docker rmi <name>_image`) so it is rebuilt.
 
-## ETAS family integration test (vetas, fletas, petai)
+## Forecast runs (sequences and full 2010-2026)
 
-```bash
-screen -S itd-etas
-conda activate testing_italy_td
-bash scripts/etas_test.sh                 # N_SMALL 2000, N_BIG 100000, big day 2016-08-25
-bash scripts/etas_test.sh 2000 20000      # shorter big run
-```
-
-Checks access to the three GFZ repos first (`git ls-remote` over ssh, no prompts) and stops with a
-warning if one fails. Then, per model, `scripts/server_test.sh` (fresh clone, image build, one
-window, 4 windows sequential vs parallel); the three models together in one parallel run
-(2016-10-28..31); N_BIG catalogs on one day per model with all cores; and a counts report
-(forecast M >= 4 numbers vs observed, days with an M >= 5.3 event not judged). Test forecasts
-are moved out of `models/<name>/forecasts` at the end. Summary: `results/etas_test/report.txt`.
+See `runs/README.md`. `scripts/prepare_runs.py` writes forecast-only runs from the root config and
+models (presets amatrice, aquila, emilia, pilot, full_a/b/c), `scripts/run_forecasts.sh` runs them
+in a `screen`, `scripts/check_run.py` verifies or quarantines, `scripts/collect_forecasts.sh` pulls
+forecasts from another machine, `scripts/estimate.py` turns pilot timings into days per run.
+Models not integrated yet are in `models_todo.yml`.
