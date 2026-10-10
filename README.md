@@ -113,3 +113,19 @@ as your user, with the window input folder mounted at `/app/input` (args.txt, ca
 any other files from the model's input/) and the forecasts folder at `/app/forecasts`. The
 image must read `/app/input/args.txt` and write `/app/forecasts/{prefix}_{start}_{end}.csv`.
 After changing a Dockerfile, remove the image (`docker rmi <name>_image`) so it is rebuilt.
+
+## ETAS family integration test (vetas, fletas, petai)
+
+```bash
+screen -S itd-etas
+conda activate testing_italy_td
+bash scripts/etas_test.sh                 # N_SMALL 2000, N_BIG 100000, big day 2016-08-25
+bash scripts/etas_test.sh 2000 20000      # shorter big run
+```
+
+Checks access to the three GFZ repos first (`git ls-remote` over ssh, no prompts) and stops with a
+warning if one fails. Then, per model, `scripts/server_test.sh` (fresh clone, image build, one
+window, 4 windows sequential vs parallel); the three models together in one parallel run
+(2016-10-28..31); N_BIG catalogs on one day per model with all cores; and a counts report
+(forecast M >= 4 numbers vs observed, days with an M >= 5.3 event not judged). Test forecasts
+are moved out of `models/<name>/forecasts` at the end. Summary: `results/etas_test/report.txt`.

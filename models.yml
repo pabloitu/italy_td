@@ -34,12 +34,15 @@
       distribution: negbinom
       apply_mc_to_lambda: True
 
-# upstream code; swap giturl/repo_hash for the fork with the parallel catalog generation
-- etas:
-    giturl: https://github.com/swiss-seismological-service/etas.git
-    repo_hash: csep/v1.0.0
-    path: models/etas
-    build: conda
+# Python ETAS family (GFZ repos, branch italy_v1): Docker image, ENTRYPOINT <prefix>-run reads
+# /app/input/args.json + catalog.csv. Catalog i uses seed + i, so n_jobs never changes a forecast.
+# n_jobs: 1 for run_mode parallel (one container per window, no CPU limit); drop it in sequential
+# mode to use all cores. Inputs: M >= 3.0 (mc in each repo's input/args.json), depth < depth_max.
+- vetas:
+    giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/vetas.git
+    repo_hash: italy_v1
+    path: models/vetas
+    build: docker
     args_file: args.json
     func: etas-run
     prefix: etas
@@ -47,35 +50,43 @@
     func_kwargs:
       n_sims: 1000
       seed: 23
-      mc: 4.0
+      mag_min: 4.0
+      depth_max: 30
+      n_jobs: 1
 
+# two inversions (free background, free productivity) + question-driven ensemble QDE(1,1,0)
 - fletas:
-    giturl: TODO
-    repo_hash: TODO
+    giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/fletas.git
+    repo_hash: italy_v1
     path: models/fletas
-    build: conda
-    args_file: args.txt
-    func: TODO
+    build: docker
+    args_file: args.json
+    func: fletas-run
     prefix: fletas
     forecast_unit: 1
     func_kwargs:
       n_sims: 1000
       seed: 23
       mag_min: 4.0
+      depth_max: 30
+      n_jobs: 1
 
+# ETAS with detection/incompleteness (history events inflated by their responsibility factor)
 - petai:
-    giturl: TODO
-    repo_hash: TODO
+    giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/petai.git
+    repo_hash: italy_v1
     path: models/petai
-    build: conda
-    args_file: args.txt
-    func: TODO
+    build: docker
+    args_file: args.json
+    func: petai-run
     prefix: petai
     forecast_unit: 1
     func_kwargs:
       n_sims: 1000
       seed: 23
       mag_min: 4.0
+      depth_max: 30
+      n_jobs: 1
 
 - simpleetas_hom:
     giturl: TODO
