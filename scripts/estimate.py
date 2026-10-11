@@ -16,9 +16,7 @@ RUNS = {
     "aquila": (date(2009, 3, 1), date(2009, 6, 9), "max"),
     "emilia": (date(2012, 5, 1), date(2012, 8, 9), "max"),
     "amatrice": (date(2016, 8, 1), date(2017, 2, 1), "max"),
-    "full_a": (date(2010, 1, 1), date(2016, 1, 1), "mean"),
-    "full_b": (date(2016, 1, 1), date(2021, 1, 1), "mean"),
-    "full_c": (date(2021, 1, 1), date(2026, 10, 1), "mean"),
+    "full": (date(2010, 1, 1), date(2021, 6, 29), "mean"),
 }
 
 p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)

@@ -1,0 +1,9 @@
+models/
+models_full/
+results/
+runs/*/results/
+runs/DONE.log
+forecasts_bad/
+screen_*.log
+*_console.log
+.idea/

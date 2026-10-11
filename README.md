@@ -114,10 +114,10 @@ any other files from the model's input/) and the forecasts folder at `/app/forec
 image must read `/app/input/args.txt` and write `/app/forecasts/{prefix}_{start}_{end}.csv`.
 After changing a Dockerfile, remove the image (`docker rmi <name>_image`) so it is rebuilt.
 
-## Forecast runs (sequences and full 2010-2026)
+## Forecast runs (sequences and full 2010-2021)
 
 See `runs/README.md`. `scripts/prepare_runs.py` writes forecast-only runs from the root config and
-models (presets amatrice, aquila, emilia, pilot, full_a/b/c), `scripts/run_forecasts.sh` runs them
+models (presets amatrice, aquila, emilia, pilot, full_2010 .. full_2021), `scripts/run_forecasts.sh` runs them
 in a `screen`, `scripts/check_run.py` verifies or quarantines, `scripts/collect_forecasts.sh` pulls
 forecasts from another machine, `scripts/estimate.py` turns pilot timings into days per run.
 Models not integrated yet are in `models_todo.yml`.

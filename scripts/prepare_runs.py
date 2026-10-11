@@ -1,8 +1,9 @@
 """Write forecast-only runs (runs/<name>/config.yml + models.yml) from the root config.yml and models.yml.
 
-A run creates forecasts only: no tests, no plots, run_mode parallel, force_rerun False. Models point
-to the shared ../../models/<name>, so every run on a server writes into the same
-models/<name>/forecasts/ and skips windows another run already made. Region, input catalog, catalog
+A run creates forecasts only: no tests, no plots, run_mode parallel, force_rerun False. Sequence runs
+point to the shared ../../models/<name>; full_* runs to ../../models_full/<name> (a separate clone,
+same <name>_image), so the full run never reuses or overwrites a sequence forecast. Runs sharing a
+folder skip windows another run already made. Region, input catalog, catalog
 and model arguments come from the root files; only n_sims, the window and the threads are set here.
 
 ETAS-type models (vetas, fletas, petai) fit on absolute dates in their args.json (timewindow_start,
@@ -15,11 +16,11 @@ Presets (daily UTC windows, end date exclusive):
   aquila    2009-03-01 to 2009-06-09   L'Aquila (rules: 2009-03-01 + 100 days)
   emilia    2012-05-01 to 2012-08-09   Emilia
   amatrice  2016-08-01 to 2017-02-01   Amatrice-Visso-Norcia-Campotosto
-  full_a    2010-01-01 to 2016-01-01   full run, part a (contains emilia)
-  full_b    2016-01-01 to 2021-01-01   full run, part b (contains amatrice)
-  full_c    2021-01-01 to 2026-10-01   full run, part c (catalog must reach the end date)
+  full_2010 .. full_2020   Jan 1 to Jan 1 of the next year   full run, one run per year
+  full_2021                2021-01-01 to 2021-06-29          (catalog ends 2021-06-28 22:58)
 
 usage: python scripts/prepare_runs.py amatrice --workers 64 [--threads 1] [--nsims 100000]
+       python scripts/prepare_runs.py full_2016 full_2017 --workers 96
                                       [--models vetas inlabru_td] [--fit-years 4 --aux-years 2]
                                       [--start ... --end ...]
 """
@@ -38,10 +39,9 @@ PRESETS = {
     "aquila": ("2009-03-01", "2009-06-09"),
     "emilia": ("2012-05-01", "2012-08-09"),
     "amatrice": ("2016-08-01", "2017-02-01"),
-    "full_a": ("2010-01-01", "2016-01-01"),
-    "full_b": ("2016-01-01", "2021-01-01"),
-    "full_c": ("2021-01-01", "2026-10-01"),
 }
+PRESETS.update({f"full_{y}": (f"{y}-01-01", f"{y + 1}-01-01") for y in range(2010, 2021)})
+PRESETS["full_2021"] = ("2021-01-01", "2021-06-29")
 THREAD_KEYS = ("n_jobs", "n_cores")
 FIT_MODELS = ("vetas", "fletas", "petai")
 CAT_START = datetime(2005, 4, 16)
@@ -94,7 +94,8 @@ for run in a.runs:
             continue
         if e.get("build") != "docker":
             print(f"WARNING {run}/{name}: build is {e.get('build')}, parallel runs need docker")
-        e["path"] = str(Path("../..") / e["path"])
+        mdir = "models_full" if run.startswith("full_") else "models"
+        e["path"] = str(Path("../..") / mdir / Path(e["path"]).name)
         kw = dict(e.get("func_kwargs") or {})
         kw["n_sims"] = a.nsims
         for k in THREAD_KEYS:
@@ -131,5 +132,6 @@ for run in a.runs:
     (d / "models.yml").write_text(yaml.safe_dump(ms, sort_keys=False))
     w = a.workers or min(os.cpu_count() or 1, 32)
     print(f"{run}: {nwin} windows {t0:%Y-%m-%d} to {t1:%Y-%m-%d}, models {[next(iter(m)) for m in ms]}, "
-          f"n_sims {a.nsims}, {w} containers x {a.threads} threads -> runs/{run}/")
+          f"n_sims {a.nsims}, {w} containers x {a.threads} threads, forecasts in "
+          f"{'models_full' if run.startswith('full_') else 'models'}/ -> runs/{run}/")
 sys.exit(1 if err else 0)
