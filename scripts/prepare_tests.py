@@ -5,8 +5,9 @@ finds every forecast on disk (force_rerun False) and only evaluates and plots. R
 runs/<run>_tests/results/<window>/{evaluations,figures}/. With --days only those windows are tested.
 
 usage: python scripts/prepare_tests.py emilia [--tests tests_n.yml] [--days 2012-05-20 2012-05-29]
-                                       [--workers 20]
+                                       [--workers 20] [--plots] [--out emilia_nslm]
 then:  cd runs/emilia_tests && TZ=UTC floatcsep run config.yml
+--plots also maps the observed catalog and every forecast (expected rates per cell) per window.
 """
 import argparse
 from datetime import datetime, timedelta
@@ -20,6 +21,8 @@ p.add_argument("run")
 p.add_argument("--tests", default="tests_n.yml", help="test config in the repo top folder")
 p.add_argument("--days", nargs="+", help="test only these daily windows (YYYY-MM-DD)")
 p.add_argument("--workers", type=int)
+p.add_argument("--plots", action="store_true", help="plot catalog and forecast maps per window")
+p.add_argument("--out", help="name of the test run folder (default <run>_tests)")
 a = p.parse_args()
 
 src = root / "runs" / a.run
@@ -39,12 +42,13 @@ cfg.update({
     "test_config": f"../../{a.tests}",
     "run_mode": "parallel",
     "force_rerun": False,
-    "postprocess": {"plot_catalog": False, "plot_forecasts": False},
+    "postprocess": {"plot_catalog": a.plots, "plot_forecasts": a.plots},
 })
-d = root / "runs" / f"{a.run}_tests"
+name = a.out or f"{a.run}_tests"
+d = root / "runs" / name
 d.mkdir(parents=True, exist_ok=True)
 (d / "config.yml").write_text(yaml.safe_dump(cfg, sort_keys=False))
 (d / "models.yml").write_text(yaml.safe_dump(ms, sort_keys=False))
 n = len(tc["time_windows"]) if "time_windows" in tc else (tc["end_date"] - tc["start_date"]).days
-print(f"runs/{a.run}_tests/: {n} windows, models {[next(iter(m)) for m in ms]}, tests {a.tests}")
-print(f"run:  cd runs/{a.run}_tests && TZ=UTC floatcsep run config.yml")
+print(f"runs/{name}/: {n} windows, models {[next(iter(m)) for m in ms]}, tests {a.tests}")
+print(f"run:  cd runs/{name} && TZ=UTC floatcsep run config.yml")
