@@ -72,6 +72,42 @@
     forecast_unit: 1
     func_kwargs: {n_sims: 1000, seed: 23, mag_min: 4.0, depth_max: 30, n_jobs: 1}
 
+# ETAS family, batch 2 (same I/O as above; fit windows handled inside the model, not by prepare_runs):
+# simpletas2_hom/_nonhom fit mu, k0 on 2 yr before each forecast day (1 yr aux); etes has fixed
+# parameters. Details: claude/italy_models_batch2.md
+- simpletas2_hom:
+    giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/simpletas_homog_mu.git
+    repo_hash: italy_v1
+    path: models/simpletas2_hom
+    build: docker
+    args_file: args.json
+    func: simpletas2-run
+    prefix: simpletas2_hom
+    forecast_unit: 1
+    func_kwargs: {n_sims: 1000, seed: 23, mag_min: 4.0, depth_max: 30, n_jobs: 1}
+
+- simpletas2_nonhom:
+    giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/simpletas_non_homog_mu.git
+    repo_hash: italy_v1
+    path: models/simpletas2_nonhom
+    build: docker
+    args_file: args.json
+    func: simpletas2-run
+    prefix: simpletas2_nonhom
+    forecast_unit: 1
+    func_kwargs: {n_sims: 1000, seed: 23, mag_min: 4.0, depth_max: 30, n_jobs: 1}
+
+- etes:
+    giturl: git@git.gfz-potsdam.de:csep/it_experiment/models/etes.git
+    repo_hash: italy_v1
+    path: models/etes
+    build: docker
+    args_file: args.json
+    func: etes-run
+    prefix: etes
+    forecast_unit: 1
+    func_kwargs: {n_sims: 1000, seed: 23, mag_min: 4.0, depth_max: 30, n_jobs: 1}
+
 # R (inlabru 2.4.0 + INLA 22.04.16); fits on M >= mag_compl, so input_config.catalog.mag_min <= 2.5
 # n_cores: cores per container (default all). With run_mode: parallel add n_cores: 1 (floatCSEP runs
 # one container per window, up to min(host cores, 32), without CPU limits)

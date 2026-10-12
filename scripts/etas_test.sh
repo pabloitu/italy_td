@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Integration test of vetas, fletas and petai on a server, before any production run.
+# Integration test of the ETAS-family Docker models on a server, before any production run.
+# Default models vetas fletas petai; MODELS="etes simpletas2_hom simpletas2_nonhom" for the others.
 #   1. access: git ls-remote of the three GFZ repos (stops with a warning if one fails)
 #   2. per model, scripts/server_test.sh: fresh clone, image build, one window, 4 windows
 #      sequential (all cores) vs parallel (n_jobs 1), identical forecasts, memory
@@ -9,7 +10,7 @@
 # Test forecasts are moved out of models/<name>/forecasts at the end, so production runs
 # (force_rerun False) start from empty folders.
 #
-# usage: bash scripts/etas_test.sh [N_SMALL=2000] [N_BIG=100000] [BIG_DAY=2016-08-25]
+# usage: [MODELS="..."] bash scripts/etas_test.sh [N_SMALL=2000] [N_BIG=100000] [BIG_DAY=2016-08-25]
 # run inside screen:  screen -S itd-etas ; conda activate testing_italy_td ; bash scripts/etas_test.sh
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -21,8 +22,8 @@ export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=20"
 nsmall=${1:-2000}
 nbig=${2:-100000}
 bigday=${3:-2016-08-25}
-models="vetas fletas petai"
-out=results/etas_test
+models=${MODELS:-"vetas fletas petai"}
+out=results/etas_test${MODELS:+_$(echo $MODELS | tr " " "-")}
 stamp=$(date -u +%Y%m%dT%H%M)
 [ -d "$out" ] && mv "$out" "${out}_old_$stamp"
 mkdir -p "$out"
