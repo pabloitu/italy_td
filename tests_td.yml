@@ -1,0 +1,23 @@
+# Catalog-based consistency tests for the time-dependent runs (one result per model and window).
+# S, M, L, MLL need observed events: pyCSEP returns an empty S result and skips M on windows
+# without events. Only the N-test is plotted by floatCSEP (plot_func: [] = no figure, avoids pyCSEP's
+# crash on empty results); the dashboard plots all results.
+# L-test and MLL need scripts/patch_floatcsep_types.py (floatCSEP c1bed2b does not know their type).
+- Catalog_N-test:
+    func: catalog_evaluations.number_test
+    plot_func:
+      - plot_test_distribution:
+          plot_args:
+            title: Number consistency test
+- Catalog_S-test:
+    func: catalog_evaluations.spatial_test
+    plot_func: []
+- Catalog_M-test:
+    func: catalog_evaluations.magnitude_test
+    plot_func: []
+- Catalog_L-test:
+    func: catalog_evaluations.pseudolikelihood_test
+    plot_func: []
+- Catalog_MLL-test:
+    func: catalog_evaluations.MLL_magnitude_test
+    plot_func: []
