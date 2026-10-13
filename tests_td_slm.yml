@@ -1,0 +1,15 @@
+# S, M, L and MLL tests only, for the windows with observed events (scripts/run_tests.sh with ACTIVE=1).
+# The N-test of every window is in tests_td_n.yml runs. No figures (plot_func: []), the dashboard plots them.
+# L-test and MLL need scripts/patch_floatcsep_types.py (or floatCSEP main after 2026-10-12).
+- Catalog_S-test:
+    func: catalog_evaluations.spatial_test
+    plot_func: []
+- Catalog_M-test:
+    func: catalog_evaluations.magnitude_test
+    plot_func: []
+- Catalog_L-test:
+    func: catalog_evaluations.pseudolikelihood_test
+    plot_func: []
+- Catalog_MLL-test:
+    func: catalog_evaluations.MLL_magnitude_test
+    plot_func: []
