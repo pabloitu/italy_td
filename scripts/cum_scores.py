@@ -8,7 +8,10 @@ same scores (a sequence run and the full run have different batch-1 forecasts: d
 
 Writes runs/<out>/results/cumulative/: cumulative.csv, cumulative.png (IG total, number, spatial,
 magnitude) and one <model>.json per model in pyCSEP result format (test_distribution = days,
-observed_statistic = cumulative IG; ll and parts in extra keys).
+observed_statistic = cumulative IG; ll and parts in extra keys). The same files with suffix _nofloor
+leave out the days where any model has a floored term (scores_td.py nfloor > 0): on those days (e.g. a
+mainshock day forecast with ~0.02 events) the score depends on the floor, i.e. on the number of simulations.
+Run folders can be given relative to runs/, e.g. rs28/full_2012 for results copied from another server.
 
 usage: python scripts/cum_scores.py OUT RUN [RUN ...] [--start 2012-05-01] [--end 2012-08-09] [--ref vetas]
    e.g. python scripts/cum_scores.py emilia_all emilia full_b2_2012 --start 2012-05-01 --end 2012-08-09
@@ -54,53 +57,57 @@ models = list(dict.fromkeys(df.model))
 df = df.sort_values("day")
 if a.ref not in models:
     raise SystemExit(f"reference {a.ref} not in {models}")
-days = sorted(df.day.unique())
-
-ref = df[df.model == a.ref].set_index("day")[parts]
-out = []
-for m in models:
-    g = df[df.model == m].set_index("day")
-    for c in parts:
-        g[f"cum_{c}"] = g[c].cumsum()
-    common = g.index.intersection(ref.index)
-    ig = (g.loc[common, parts] - ref.loc[common]).cumsum()
-    for c in parts:
-        g[f"ig_{c}"] = ig[c].reindex(g.index).ffill()
-    out.append(g.reset_index())
-    miss = len(days) - len(g)
-    print(f"{m:20s} days {len(g):5d}{f' (missing {miss})' if miss else '':16s} ll {g.ll.sum():10.1f}  "
-          f"IG vs {a.ref} {ig.ll.iloc[-1] if len(ig) else np.nan:9.1f} (n {ig.ll_n.iloc[-1] if len(ig) else np.nan:8.1f}"
-          f" s {ig.ll_s.iloc[-1] if len(ig) else np.nan:8.1f} m {ig.ll_m.iloc[-1] if len(ig) else np.nan:7.1f})"
-          f"  floored {int(g.nfloor.sum())}")
-res = pd.concat(out)
-
+fl = df.groupby("day").nfloor.max()
+skip = sorted(fl.index[fl > 0])
 od = root / "runs" / a.out / "results" / "cumulative"
 od.mkdir(parents=True, exist_ok=True)
-res.drop(columns="src").to_csv(od / "cumulative.csv", index=False, float_format="%.6g")
-for m, g in res.groupby("model", sort=False):
-    js = {"name": "Cumulative information gain", "sim_name": m, "obs_name": a.ref, "obs_catalog_repr": None,
-          "quantile": None, "observed_statistic": g.ig_ll.round(4).tolist(), "test_distribution": g.day.tolist(),
-          "status": "normal", "min_mw": None, "type": "CumulativeInformationGain",
-          "cum_ll": g.cum_ll.round(4).tolist(), "cum_ll_n": g.cum_ll_n.round(4).tolist(),
-          "cum_ll_s": g.cum_ll_s.round(4).tolist(), "cum_ll_m": g.cum_ll_m.round(4).tolist(),
-          "ig_ll_n": g.ig_ll_n.round(4).tolist(), "ig_ll_s": g.ig_ll_s.round(4).tolist(),
-          "ig_ll_m": g.ig_ll_m.round(4).tolist(), "obs": g.obs.astype(int).tolist()}
-    (od / f"{m}.json").write_text(json.dumps(js).replace("NaN", "null"))
+for tag, sub in [("", df), ("_nofloor", df[~df.day.isin(skip)])]:
+    days = sorted(sub.day.unique())
+    print(f"\n== {a.out}{tag}: {len(days)} days" + (f" (without the {len(skip)} days where a model has a floored term:"
+          f" {', '.join(skip[:8])}{' ...' if len(skip) > 8 else ''})" if tag else ""))
+    ref = sub[sub.model == a.ref].set_index("day")[parts]
+    out = []
+    for m in models:
+        g = sub[sub.model == m].set_index("day")
+        for c in parts:
+            g[f"cum_{c}"] = g[c].cumsum()
+        common = g.index.intersection(ref.index)
+        ig = (g.loc[common, parts] - ref.loc[common]).cumsum()
+        for c in parts:
+            g[f"ig_{c}"] = ig[c].reindex(g.index).ffill()
+        out.append(g.reset_index())
+        miss = len(days) - len(g)
+        last = ig.iloc[-1] if len(ig) else pd.Series(np.nan, index=parts)
+        print(f"{m:20s} days {len(g):5d}{f' (missing {miss})' if miss else '':16s} ll {g.ll.sum():10.1f}  "
+              f"IG vs {a.ref} {last.ll:9.1f} (n {last.ll_n:8.1f} s {last.ll_s:8.1f} m {last.ll_m:7.1f})"
+              f"  floored {int(g.nfloor.sum())}")
+    res = pd.concat(out)
+    res.drop(columns="src").to_csv(od / f"cumulative{tag}.csv", index=False, float_format="%.6g")
+    for m, g in res.groupby("model", sort=False):
+        js = {"name": f"Cumulative information gain{' (no floored days)' if tag else ''}", "sim_name": m,
+              "obs_name": a.ref, "obs_catalog_repr": None, "quantile": None,
+              "observed_statistic": g.ig_ll.round(4).tolist(), "test_distribution": g.day.tolist(),
+              "status": "normal", "min_mw": None, "type": "CumulativeInformationGain",
+              **{f"cum_{c}": g[f"cum_{c}"].round(4).tolist() for c in parts},
+              **{f"ig_{c}": g[f"ig_{c}"].round(4).tolist() for c in parts[1:]},
+              "obs": g.obs.astype(int).tolist(), "skipped_days": skip if tag else []}
+        (od / f"{m}{tag}.json").write_text(json.dumps(js).replace("NaN", "null"))
 
-# figure
-fig, ax = plt.subplots(4, 1, figsize=(10, 11), sharex=True)
-for m, g in res.groupby("model", sort=False):
-    t = pd.to_datetime(g.day)
-    for i, (c, lab) in enumerate(zip(parts, ["total", "number", "spatial", "magnitude"])):
-        ax[i].plot(t, g[f"ig_{c}"], lw=1.2, label=m)
-        ax[i].set_ylabel(f"IG {lab}")
-obs = res[res.model == a.ref]
-for i in range(4):
-    ax[i].axhline(0, c="k", lw=0.5)
-    for t in pd.to_datetime(obs.day[obs.obs >= 5]):
-        ax[i].axvline(t, c="0.85", lw=0.6, zorder=0)
-ax[0].legend(fontsize=8, ncol=4)
-ax[0].set_title(f"{a.out}: cumulative log-likelihood gain vs {a.ref} (grey: days with >= 5 events)")
-fig.tight_layout()
-fig.savefig(od / "cumulative.png", dpi=130)
+    # figure
+    fig, ax = plt.subplots(4, 1, figsize=(10, 11), sharex=True)
+    for m, g in res.groupby("model", sort=False):
+        t = pd.to_datetime(g.day)
+        for i, (c, lab) in enumerate(zip(parts, ["total", "number", "spatial", "magnitude"])):
+            ax[i].plot(t, g[f"ig_{c}"], lw=1.2, label=m)
+            ax[i].set_ylabel(f"IG {lab}")
+    for i in range(4):
+        ax[i].axhline(0, c="k", lw=0.5)
+        for t in pd.to_datetime(skip):
+            ax[i].axvline(t, c="tab:red" if tag else "0.8", lw=0.6, ls=":" if tag else "-", zorder=0)
+    ax[0].legend(fontsize=8, ncol=4)
+    ax[0].set_title(f"{a.out}: cumulative log-likelihood gain vs {a.ref}"
+                    + (" without days with floored terms (red)" if tag else " (grey: days with floored terms)"))
+    fig.tight_layout()
+    fig.savefig(od / f"cumulative{tag}.png", dpi=130)
+    plt.close(fig)
 print(f"-> {od}")
