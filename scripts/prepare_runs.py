@@ -18,6 +18,13 @@ Presets (daily UTC windows, end date exclusive):
   amatrice  2016-08-01 to 2017-02-01   Amatrice-Visso-Norcia-Campotosto
   full_2010 .. full_2020   Jan 1 to Jan 1 of the next year   full run, one run per year
   full_2021                2021-01-01 to 2021-06-29          (catalog ends 2021-06-28 22:58)
+  prosp_2022 .. prosp_2025 Jan 1 to Jan 1 of the next year   pseudo-prospective run, one run per year
+  prosp_2026               2026-01-01 to 2026-10-12          (data/iside_ml_2026.csv, downloaded 2026-10-13)
+  prosp_b2_2022 .. prosp_b2_2026   same windows, for the batch-2 models on another server
+
+Run prefixes decide the model folder and the catalog: full_* -> models_full/, prosp_* -> models_prosp/
+and data/iside_ml_2026.csv (iside_ml.csv extended with scripts/extend_catalog.py), others -> models/
+and the catalog of the root config.yml.
 
 usage: python scripts/prepare_runs.py amatrice --workers 64 [--threads 1] [--nsims 100000]
        python scripts/prepare_runs.py full_2016 full_2017 --workers 96
@@ -42,6 +49,10 @@ PRESETS = {
 }
 PRESETS.update({f"full_{y}": (f"{y}-01-01", f"{y + 1}-01-01") for y in range(2010, 2021)})
 PRESETS["full_2021"] = ("2021-01-01", "2021-06-29")
+PRESETS.update({f"prosp_{y}": (f"{y}-01-01", f"{y + 1}-01-01") for y in range(2022, 2026)})
+PRESETS["prosp_2026"] = ("2026-01-01", "2026-10-12")
+PRESETS.update({f"prosp_b2_{y[6:]}": v for y, v in list(PRESETS.items()) if y.startswith("prosp_")})
+DIRS = {"full_": ("models_full", None), "prosp_": ("models_prosp", "data/iside_ml_2026.csv")}
 THREAD_KEYS = ("n_jobs", "n_cores")
 FIT_MODELS = ("vetas", "fletas", "petai")
 CAT_START = datetime(2005, 4, 16)
@@ -60,11 +71,15 @@ a = p.parse_args()
 
 cfg0 = yaml.safe_load((root / "config.yml").read_text())
 models0 = yaml.safe_load((root / "models.yml").read_text())
-cat = pd.read_csv(root / cfg0["catalog"], usecols=["time_string"])
-cat_end = pd.to_datetime(cat["time_string"], format="ISO8601").max()
 
 err = 0
 for run in a.runs:
+    mdir, cat_file = next((v for k, v in DIRS.items() if run.startswith(k)), ("models", None))
+    cat_file = cat_file or cfg0["catalog"]
+    if not (root / cat_file).exists():
+        sys.exit(f"missing catalog {cat_file}")
+    cat = pd.read_csv(root / cat_file, usecols=["time_string"])
+    cat_end = pd.to_datetime(cat["time_string"], format="ISO8601").max()
     if run not in PRESETS and not (a.start and a.end):
         sys.exit(f"unknown run {run}: use a preset or give --start and --end")
     pre = PRESETS.get(run, (a.start, a.end))
@@ -82,7 +97,7 @@ for run in a.runs:
     nwin = len(tc["time_windows"]) if "time_windows" in tc else (t1 - t0).days
 
     if cat_end < t1 - timedelta(days=1):
-        print(f"ERROR {run}: catalog {cfg0['catalog']} ends {cat_end:%Y-%m-%d}, run ends {t1:%Y-%m-%d}")
+        print(f"ERROR {run}: catalog {cat_file} ends {cat_end:%Y-%m-%d}, run ends {t1:%Y-%m-%d}")
         err += 1
 
     ms = []
@@ -94,7 +109,6 @@ for run in a.runs:
             continue
         if e.get("build") != "docker":
             print(f"WARNING {run}/{name}: build is {e.get('build')}, parallel runs need docker")
-        mdir = "models_full" if run.startswith("full_") else "models"
         e["path"] = str(Path("../..") / mdir / Path(e["path"]).name)
         kw = dict(e.get("func_kwargs") or {})
         kw["n_sims"] = a.nsims
@@ -119,7 +133,7 @@ for run in a.runs:
         "time_config": tc,
         "region_config": cfg0["region_config"],
         "input_config": cfg0["input_config"],
-        "catalog": str(Path("../..") / cfg0["catalog"]),
+        "catalog": str(Path("../..") / cat_file),
         "model_config": "models.yml",
         "run_dir": "results",
         "force_rerun": False,
@@ -133,5 +147,5 @@ for run in a.runs:
     w = a.workers or min(os.cpu_count() or 1, 32)
     print(f"{run}: {nwin} windows {t0:%Y-%m-%d} to {t1:%Y-%m-%d}, models {[next(iter(m)) for m in ms]}, "
           f"n_sims {a.nsims}, {w} containers x {a.threads} threads, forecasts in "
-          f"{'models_full' if run.startswith('full_') else 'models'}/ -> runs/{run}/")
+          f"{mdir}/, catalog {cat_file} -> runs/{run}/")
 sys.exit(1 if err else 0)
