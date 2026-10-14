@@ -21,6 +21,8 @@ Presets (daily UTC windows, end date exclusive):
   prosp_2022 .. prosp_2025 Jan 1 to Jan 1 of the next year   pseudo-prospective run, one run per year
   prosp_2026               2026-01-01 to 2026-10-12          (data/iside_ml_2026.csv, downloaded 2026-10-13)
   prosp_b2_2022 .. prosp_b2_2026   same windows, for the batch-2 models on another server
+  emilia35, amatrice35, aquila35 (+ _b2)   the sequences with forecast and test magnitude M >= 3.5
+                           (func_kwargs mag_min and region_config mag_min 3.5), models_seq35/
 
 Run prefixes decide the model folder and the catalog: full_* -> models_full/, prosp_* -> models_prosp/
 and data/iside_ml_2026.csv (iside_ml.csv extended with scripts/extend_catalog.py), others -> models/
@@ -52,6 +54,9 @@ PRESETS["full_2021"] = ("2021-01-01", "2021-06-29")
 PRESETS.update({f"prosp_{y}": (f"{y}-01-01", f"{y + 1}-01-01") for y in range(2022, 2026)})
 PRESETS["prosp_2026"] = ("2026-01-01", "2026-10-12")
 PRESETS.update({f"prosp_b2_{y[6:]}": v for y, v in list(PRESETS.items()) if y.startswith("prosp_")})
+for q in ("aquila", "emilia", "amatrice"):
+    PRESETS[f"{q}35"] = PRESETS[f"{q}35_b2"] = PRESETS[q]
+MAG35 = 3.5
 DIRS = {"full_": ("models_full", None), "prosp_": ("models_prosp", "data/iside_ml_2026.csv")}
 THREAD_KEYS = ("n_jobs", "n_cores")
 FIT_MODELS = ("vetas", "fletas", "petai")
@@ -75,6 +80,9 @@ models0 = yaml.safe_load((root / "models.yml").read_text())
 err = 0
 for run in a.runs:
     mdir, cat_file = next((v for k, v in DIRS.items() if run.startswith(k)), ("models", None))
+    m35 = run.split("_")[0].endswith("35")
+    if m35:
+        mdir = "models_seq35"
     cat_file = cat_file or cfg0["catalog"]
     if not (root / cat_file).exists():
         sys.exit(f"missing catalog {cat_file}")
@@ -112,6 +120,8 @@ for run in a.runs:
         e["path"] = str(Path("../..") / mdir / Path(e["path"]).name)
         kw = dict(e.get("func_kwargs") or {})
         kw["n_sims"] = a.nsims
+        if m35:
+            kw["mag_min"] = MAG35
         for k in THREAD_KEYS:
             if k in kw:
                 kw[k] = a.threads
@@ -131,7 +141,7 @@ for run in a.runs:
     cfg = {
         "name": f"Italy TD forecasts, {run}",
         "time_config": tc,
-        "region_config": cfg0["region_config"],
+        "region_config": {**cfg0["region_config"], **({"mag_min": MAG35} if m35 else {})},
         "input_config": cfg0["input_config"],
         "catalog": str(Path("../..") / cat_file),
         "model_config": "models.yml",
@@ -147,5 +157,5 @@ for run in a.runs:
     w = a.workers or min(os.cpu_count() or 1, 32)
     print(f"{run}: {nwin} windows {t0:%Y-%m-%d} to {t1:%Y-%m-%d}, models {[next(iter(m)) for m in ms]}, "
           f"n_sims {a.nsims}, {w} containers x {a.threads} threads, forecasts in "
-          f"{mdir}/, catalog {cat_file} -> runs/{run}/")
+          f"{mdir}/, catalog {cat_file}, M >= {MAG35 if m35 else cfg0['region_config']['mag_min']} -> runs/{run}/")
 sys.exit(1 if err else 0)
