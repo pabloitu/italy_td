@@ -14,7 +14,8 @@ background is the same for every model: the catalog (e.g. HORUS, column M or mag
 with Helmstetter et al. (2007) adaptive power-law kernels (bandwidth = distance to the --nn-th
 neighbour, at least 0.5 km), scaled to events per day (declustered count / catalog length) and
 extrapolated to the forecast magnitude bins with Gutenberg-Richter b = 1. Cells with simulated events
-keep the simulated rates.
+keep the simulated rates. Only the map colours change: the expected numbers (totals) stay those of
+the simulated forecast.
 
 --bg RUN (display only): instead, each model's own long-term rate from a long simulation
 (scripts/prepare_bg.py, runs/RUN), skipping the first --skip years; models without one fall back to
@@ -77,10 +78,11 @@ ms = yaml.safe_load((d / "models.yml").read_text())
 cfg = {next(iter(m)): m[next(iter(m))] for m in ms}
 
 
-def encode(rates):
+def encode(rates, tot=None):
     cum = np.cumsum(rates[:, ::-1], axis=1)[:, ::-1]
     pos = cum > 0
-    tot = np.round(cum.sum(axis=0), 4).tolist()
+    if tot is None:
+        tot = np.round(cum.sum(axis=0), 4).tolist()
     if not pos.any():
         return {"vmin": 0.0, "vmax": 1.0, "totals": tot, "data": ""}
     with np.errstate(divide="ignore"):
@@ -175,12 +177,13 @@ def job(args):
     df = df[k >= 0]; k = k[k >= 0]
     i = reg.get_index_of(df.lon.to_numpy(), df.lat.to_numpy())
     rates = np.bincount(i * nm + k, minlength=nc * nm).reshape(nc, nm) / n
+    tot = np.round(np.cumsum(rates[:, ::-1], axis=1)[:, ::-1].sum(axis=0), 4).tolist()
     fill = mbg.get(name, bg)
     if fill is not None:
         empty = rates.sum(axis=1) == 0
         rates[empty] = fill[empty]
     rec = {"model": mid, "window": wid, "mags": np.round(mags, 3).tolist(), "n_cells": nc,
-           **encode(rates), "grid": "region"}
+           **encode(rates, tot), "grid": "region"}
     (out / rel).parent.mkdir(parents=True, exist_ok=True)
     with open(out / rel, "w") as fh:
         json.dump(rec, fh, separators=(",", ":"))

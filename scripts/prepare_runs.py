@@ -70,6 +70,7 @@ p.add_argument("--workers", type=int, default=None, help="containers at once (de
 p.add_argument("--models", nargs="+", help="subset of the root models.yml (default: all with a giturl except mock*)")
 p.add_argument("--fit-years", type=float, default=4, help="ETAS models: fit window before the run start")
 p.add_argument("--aux-years", type=float, default=2, help="ETAS models: auxiliary window before the fit window")
+p.add_argument("--models-dir", help="model folder instead of the default (e.g. models_timing/n1000)")
 p.add_argument("--start")
 p.add_argument("--end")
 a = p.parse_args()
@@ -83,6 +84,8 @@ for run in a.runs:
     m35 = run.split("_")[0].endswith("35")
     if m35:
         mdir = "models_seq35"
+    if a.models_dir:
+        mdir = a.models_dir
     cat_file = cat_file or cfg0["catalog"]
     if not (root / cat_file).exists():
         sys.exit(f"missing catalog {cat_file}")
